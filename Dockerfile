@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright 2016-2017 Dell Inc.
+# Copyright 2017 Samsung Electronics All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,37 +15,45 @@
 #
 ###############################################################################
 # Docker image for EdgeX Foundry Config Seed 
-# FROM java:8
-FROM maven:3.3-jdk-8-alpine
+FROM golang:1.7.5-alpine AS build-env
 
-COPY docker-files/pom.xml .
+RUN mkdir -p /go/src \
+ && mkdir -p /go/bin \
+ && mkdir -p /go/pkg
 
-RUN mvn dependency:copy -q
+ENV GOPATH=/go
+ENV PATH=$GOPATH/bin:$PATH
 
-FROM alpine:3.6
-MAINTAINER Cloud Tsai <Cloud.Tsai@Dell.com>
+RUN apk add --update git
+RUN go get github.com/hashicorp/consul/api
+RUN go get github.com/magiconair/properties
+RUN go get gopkg.in/yaml.v2
 
-RUN apk --update add openjdk8-jre
+RUN mkdir -p $GOPATH/src/go-core-config-seed
+WORKDIR src/go-core-config-seed
+COPY /src/. .
+COPY /res/. .
+
+RUN go build .
+
 
 # Consul Docker image for EdgeX Foundry
 FROM consul:0.7.3
 
 # environment variables
-ENV APP_DIR=/edgex/core-config-seed
-ENV APP=core-config-seed.jar
-
+ENV APP_DIR=/edgex/go-core-config-seed
+ENV APP=go-core-config-seed
 ENV WAIT_FOR_A_WHILE=10
-
 ENV CONSUL_ARGS="-server -client=0.0.0.0 -bootstrap -ui"
-
-#copy JAR and default config files to the image
-COPY --from=0 *.jar $APP_DIR/$APP
-COPY docker-files/*.properties $APP_DIR/
-COPY ./config $APP_DIR/config
-COPY docker-files/launch-consul-config.sh $APP_DIR/
 
 #set the working directory
 WORKDIR $APP_DIR
+
+#copy Go App and default config files to the image
+COPY --from=build-env /go/src/go-core-config-seed/ .
+
+COPY launch-consul-config.sh .
+COPY ./config ./config
 
 #call the wrapper to launch consul and main app
 CMD $APP_DIR/launch-consul-config.sh

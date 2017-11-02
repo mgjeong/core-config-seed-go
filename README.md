@@ -17,13 +17,13 @@ configPath=./config
 \#The global prefix namespace which will be created on the Consul Key/Value store
 globalPrefix=config
 
-\#The communication protocol of the Consul server   
+\#The communication protocol of the Consul server
 consul.protocol=http
 
-\#The hostname of the Consul server  
+\#The hostname of the Consul server
 consul.host=localhost
 
-\#The communication port number of the Consul server  
+\#The communication port number of the Consul server
 consul.port=8500
 
 \#If isReset=true, it will remove all the original values under the globalPrefix and import the configuration data
