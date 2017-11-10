@@ -18,32 +18,32 @@ package main
 
 import (
 	"os"
-	"strings"
 	"strconv"
+	"strings"
 	// "log"
-	"fmt"
-	"time"
-	"path/filepath"
-	"net/http"
-	"io/ioutil"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"path/filepath"
+	"time"
 
 	// "bitbucket.org/clientcto/go-logging-client"
 	// "github.com/bullapse/bootloader"
 	// "github.com/natefinch/lumberjack"
 
-	consulapi "github.com/hashicorp/consul/api"	
+	consulapi "github.com/hashicorp/consul/api"
 
 	"github.com/magiconair/properties"
 	"gopkg.in/yaml.v2"
-
 )
+
 // var logger *log.Logger
 
 type ConfigProperties map[string]string
 
-func main(){
+func main() {
 	// Load configuration data
 	if err := readConfigurationFile("./configuration.json"); err != nil {
 		fmt.Println(err.Error())
@@ -83,13 +83,13 @@ func readConfigurationFile(path string) error {
 	if err != nil {
 		return err
 	}
-	
+
 	// Decode the configuration as JSON
 	err = json.Unmarshal(contents, &configuration)
 	if err != nil {
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -151,15 +151,15 @@ func loadConfigFromPath(kv *consulapi.KV) {
 		if !isAcceptablePropertyExtensions(info.Name()) {
 			return nil
 		}
-		
+
 		dir, file := filepath.Split(path)
-		fmt.Println("found config file:", file, "in context", strings.TrimPrefix(dir, configuration.GlobalPrefix + "/"))
+		fmt.Println("found config file:", file, "in context", strings.TrimPrefix(dir, configuration.GlobalPrefix+"/"))
 
 		props, err := readPropertiesFile(path)
 		if err != nil {
 			return err
 		}
-	
+
 		for k := range props {
 			p := &consulapi.KVPair{Key: dir + k, Value: []byte(props[k])}
 			if _, err := kv.Put(p, nil); err != nil {
