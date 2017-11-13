@@ -17,46 +17,31 @@
 package main
 
 import (
-	"os"
-	"strconv"
-	"strings"
-	// "log"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
-
-	// "bitbucket.org/clientcto/go-logging-client"
-	// "github.com/bullapse/bootloader"
-	// "github.com/natefinch/lumberjack"
-
-	consulapi "github.com/hashicorp/consul/api"
 
 	"github.com/magiconair/properties"
 	"gopkg.in/yaml.v2"
-)
 
-// var logger *log.Logger
+	consulapi "github.com/hashicorp/consul/api"
+)
 
 type ConfigProperties map[string]string
 
 func main() {
 	// Load configuration data
-	if err := readConfigurationFile("./configuration.json"); err != nil {
+	if err := loadConfigurationFile("./configuration.json"); err != nil {
 		fmt.Println(err.Error())
 		return
 	}
-
-	// logger = log.New(&lumberjack.Logger{
-	// 		Filename:   configuration.LoggingFile,
-	// 		MaxSize:    500,	// megabytes
-	// 		MaxBackups: 3,
-	// 		MaxAge:     28, 	//days
-	// }, "", log.Ldate | log.Ltime | log.Lshortfile)
-	// bootloader.RunWithLog("banner.txt", logger)
 
 	consulClient, err := getConsulCient()
 	if err != nil {
@@ -67,17 +52,14 @@ func main() {
 	kv := consulClient.KV()
 
 	if configuration.IsReset {
-		_, err := kv.DeleteTree(configuration.GlobalPrefix, nil)
-		if err != nil {
-			fmt.Println(err.Error())
-			return
-		}
+		removeStoredConfig(kv)
+		loadConfigFromPath(kv)
 	} else if !isConfigInitialized(kv) {
 		loadConfigFromPath(kv)
 	}
 }
 
-func readConfigurationFile(path string) error {
+func loadConfigurationFile(path string) error {
 	// Read the configuration file
 	contents, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -122,6 +104,14 @@ func getConsulCient() (*consulapi.Client, error) {
 	return consulapi.NewClient(config)
 }
 
+func removeStoredConfig(kv *consulapi.KV) {
+	_, err := kv.DeleteTree(configuration.GlobalPrefix, nil)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+}
+
 func isConfigInitialized(kv *consulapi.KV) bool {
 	keys, _, err := kv.Keys(configuration.GlobalPrefix, "", nil)
 	if err != nil {
@@ -143,19 +133,15 @@ func loadConfigFromPath(kv *consulapi.KV) {
 			return err
 		}
 
-		// skip directories
-		if info.IsDir() {
-			return nil
-		}
-		// verify file extension
-		if !isAcceptablePropertyExtensions(info.Name()) {
+		// Skip directories & unacceptable property extension
+		if info.IsDir() || !isAcceptablePropertyExtensions(info.Name()) {
 			return nil
 		}
 
 		dir, file := filepath.Split(path)
 		fmt.Println("found config file:", file, "in context", strings.TrimPrefix(dir, configuration.GlobalPrefix+"/"))
 
-		props, err := readPropertiesFile(path)
+		props, err := readPropertyFile(path)
 		if err != nil {
 			return err
 		}
@@ -183,32 +169,14 @@ func isAcceptablePropertyExtensions(file string) bool {
 	return false
 }
 
-func readPropertiesFile(filePath string) (ConfigProperties, error) {
-	configProps := ConfigProperties{}
-
+func readPropertyFile(filePath string) (ConfigProperties, error) {
 	if isYamlExtensions(filePath) {
-		contents, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			return nil, err
-		}
-
-		var body map[string]interface{}
-		if err = yaml.Unmarshal(contents, &body); err != nil {
-			return nil, err
-		}
-
-		for key, value := range body {
-			configProps[key] = fmt.Sprint(value)
-		}
+		// Read .yaml/.yml file
+		return readYamlFile(filePath)
 	} else {
-		props, err := properties.LoadFile(filePath, properties.UTF8)
-		if err != nil {
-			return nil, err
-		}
-		configProps = props.Map()
+		// Read .properties file
+		return readPropertiesFile(filePath)
 	}
-
-	return configProps, nil
 }
 
 func isYamlExtensions(file string) bool {
@@ -218,4 +186,36 @@ func isYamlExtensions(file string) bool {
 		}
 	}
 	return false
+}
+
+func readYamlFile(filePath string) (ConfigProperties, error) {
+	configProps := ConfigProperties{}
+
+	contents, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	var body map[string]interface{}
+	if err = yaml.Unmarshal(contents, &body); err != nil {
+		return nil, err
+	}
+
+	for key, value := range body {
+		configProps[key] = fmt.Sprint(value)
+	}
+
+	return configProps, nil
+}
+
+func readPropertiesFile(filePath string) (ConfigProperties, error) {
+	configProps := ConfigProperties{}
+
+	props, err := properties.LoadFile(filePath, properties.UTF8)
+	if err != nil {
+		return nil, err
+	}
+	configProps = props.Map()
+
+	return configProps, nil
 }

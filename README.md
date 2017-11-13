@@ -52,7 +52,5 @@ However, you can use different profile name to categorize the usage on the same 
 - `docker run -p 8400:8400 -p 8500:8500 -p 8600:8600 --name="edgex-config-seed" --hostname="edgex-core-config-seed" go-core-config-seed`
 
 ## TODO ## 
-- Apply go-logging-client
-- Apply gofmt
-- TC with gomock
-- Docker Compose file
+- Logger
+- TC

@@ -62,7 +62,7 @@ func setUp(t *testing.T) tearDown {
 	}
 }
 
-func TestReadConfigurationFile(t *testing.T) {
+func TestLoadConfigurationFile(t *testing.T) {
 	tmpFile, err := os.Create("test.json")
 	if err != nil {
 		t.Error(err.Error())
@@ -93,7 +93,7 @@ func TestReadConfigurationFile(t *testing.T) {
 	}
 
 	for _, p := range paths {
-		err := readConfigurationFile(p.path)
+		err := loadConfigurationFile(p.path)
 		if err != nil && err.Error() != p.err {
 			t.Error("Expected error :" + p.err + ", Actual error :" + err.Error())
 		}
