@@ -29,8 +29,8 @@ RUN go get github.com/hashicorp/consul/api
 RUN go get github.com/magiconair/properties
 RUN go get gopkg.in/yaml.v2
 
-RUN mkdir -p $GOPATH/src/go-core-config-seed
-WORKDIR src/go-core-config-seed
+RUN mkdir -p $GOPATH/src/core-config-seed-go
+WORKDIR src/core-config-seed-go
 COPY /src/. .
 COPY /res/. .
 
@@ -41,8 +41,8 @@ RUN go build .
 FROM consul:0.7.3
 
 # environment variables
-ENV APP_DIR=/edgex/go-core-config-seed
-ENV APP=go-core-config-seed
+ENV APP_DIR=/edgex/core-config-seed-go
+ENV APP=core-config-seed-go
 ENV WAIT_FOR_A_WHILE=10
 ENV CONSUL_ARGS="-server -client=0.0.0.0 -bootstrap -ui"
 
@@ -50,7 +50,7 @@ ENV CONSUL_ARGS="-server -client=0.0.0.0 -bootstrap -ui"
 WORKDIR $APP_DIR
 
 #copy Go App and default config files to the image
-COPY --from=build-env /go/src/go-core-config-seed/ .
+COPY --from=build-env /go/src/core-config-seed-go/ .
 
 COPY launch-consul-config.sh .
 COPY ./config ./config
