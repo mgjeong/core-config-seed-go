@@ -81,7 +81,7 @@ func getConsulCient() (*consulapi.Client, error) {
 	// Check the connection to Consul
 	fails := 0
 	for fails < configuration.FailLimit {
-		resp, err := http.Get(consulUrl + CONSUL_STATUS_PATH) //@TODO: not sure if this method is proper
+		resp, err := http.Get(consulUrl + CONSUL_STATUS_PATH)
 		if err != nil {
 			fmt.Println(err.Error())
 			time.Sleep(time.Second * time.Duration(configuration.FailWaittime))
