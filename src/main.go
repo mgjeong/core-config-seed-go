@@ -139,15 +139,22 @@ func loadConfigFromPath(kv *consulapi.KV) {
 		}
 
 		dir, file := filepath.Split(path)
-		fmt.Println("found config file:", file, "in context", strings.TrimPrefix(dir, configuration.GlobalPrefix+"/"))
+		configPath, err := filepath.Rel(".", configuration.ConfigPath)
+		if err != nil {
+			return err
+		}
+
+		dir = strings.TrimPrefix(dir, configPath+"/")
+		fmt.Println("found config file:", file, "in context", dir)
 
 		props, err := readPropertyFile(path)
 		if err != nil {
 			return err
 		}
 
+		prefix := configuration.GlobalPrefix + "/" + dir
 		for k := range props {
-			p := &consulapi.KVPair{Key: dir + k, Value: []byte(props[k])}
+			p := &consulapi.KVPair{Key: prefix + k, Value: []byte(props[k])}
 			if _, err := kv.Put(p, nil); err != nil {
 				return err
 			}
