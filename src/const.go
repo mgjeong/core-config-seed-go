@@ -28,7 +28,6 @@ type ConfigurationStruct struct{
     FailWaittime int
     AcceptablePropertyExtensions []string
     YamlExtensions []string
-    LoggingFile string
 }
 
 // Configuration data for the config-seed service
