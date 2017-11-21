@@ -8,6 +8,5 @@
     "FailLimit" : 30,
     "FailWaittime" : 3,
     "AcceptablePropertyExtensions" : [".yaml", ".yml", ".properties"],
-    "YamlExtensions" : [".yaml", ".yml"],
-    "LoggingFile" : "edgex-core-config-seed.log"
+    "YamlExtensions" : [".yaml", ".yml"]
 }
