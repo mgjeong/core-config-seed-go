@@ -93,7 +93,7 @@ func getConsulCient() (*consulapi.Client, error) {
 			break
 		}
 	}
-	if fails == configuration.FailLimit {
+	if fails >= configuration.FailLimit {
 		return nil, errors.New("Cannot get connection to Consul")
 	}
 
