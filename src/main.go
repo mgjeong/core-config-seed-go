@@ -36,6 +36,15 @@ import (
 
 type ConfigProperties map[string]string
 
+var (
+	consulDefaultConfig = consulapi.DefaultConfig
+	consulNewClient     = consulapi.NewClient
+	consulDeleteTree    = (*consulapi.KV).DeleteTree
+	consulPut           = (*consulapi.KV).Put
+	consulKeys          = (*consulapi.KV).Keys
+	httpGet             = http.Get
+)
+
 func main() {
 	// Load configuration data
 	if err := loadConfigurationFile("./configuration.json"); err != nil {
@@ -81,7 +90,7 @@ func getConsulCient() (*consulapi.Client, error) {
 	// Check the connection to Consul
 	fails := 0
 	for fails < configuration.FailLimit {
-		resp, err := http.Get(consulUrl + CONSUL_STATUS_PATH)
+		resp, err := httpGet(consulUrl + CONSUL_STATUS_PATH)
 		if err != nil {
 			fmt.Println(err.Error())
 			time.Sleep(time.Second * time.Duration(configuration.FailWaittime))
@@ -98,22 +107,23 @@ func getConsulCient() (*consulapi.Client, error) {
 	}
 
 	// Connect to the Consul Agent
-	config := consulapi.DefaultConfig()
+	config := consulDefaultConfig()
 	config.Address = consulUrl
 
-	return consulapi.NewClient(config)
+	return consulNewClient(config)
 }
 
 func removeStoredConfig(kv *consulapi.KV) {
-	_, err := kv.DeleteTree(configuration.GlobalPrefix, nil)
+	_, err := consulDeleteTree(kv, configuration.GlobalPrefix, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
+	fmt.Println("All values under the globalPrefix(\"" + configuration.GlobalPrefix + "\") is removed.")
 }
 
 func isConfigInitialized(kv *consulapi.KV) bool {
-	keys, _, err := kv.Keys(configuration.GlobalPrefix, "", nil)
+	keys, _, err := consulKeys(kv, configuration.GlobalPrefix, "", nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return false
@@ -155,7 +165,7 @@ func loadConfigFromPath(kv *consulapi.KV) {
 		prefix := configuration.GlobalPrefix + "/" + dir
 		for k := range props {
 			p := &consulapi.KVPair{Key: prefix + k, Value: []byte(props[k])}
-			if _, err := kv.Put(p, nil); err != nil {
+			if _, err := consulPut(kv, p, nil); err != nil {
 				return err
 			}
 		}
