@@ -43,7 +43,7 @@ FROM consul:0.7.3
 # environment variables
 ENV APP_DIR=/edgex/core-config-seed-go
 ENV APP=core-config-seed-go
-ENV WAIT_FOR_A_WHILE=10
+ENV WAIT_FOR_A_WHILE=5
 ENV CONSUL_ARGS="-server -client=0.0.0.0 -bootstrap -ui"
 
 #set the working directory
