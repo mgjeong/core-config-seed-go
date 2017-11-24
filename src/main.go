@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -45,16 +46,18 @@ var (
 	httpGet             = http.Get
 )
 
+var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
+
 func main() {
 	// Load configuration data
 	if err := loadConfigurationFile("./configuration.json"); err != nil {
-		fmt.Println(err.Error())
+		logger.Println(err.Error())
 		return
 	}
 
 	consulClient, err := getConsulCient()
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Println(err.Error())
 		return
 	}
 
@@ -92,7 +95,7 @@ func getConsulCient() (*consulapi.Client, error) {
 	for fails < configuration.FailLimit {
 		resp, err := httpGet(consulUrl + CONSUL_STATUS_PATH)
 		if err != nil {
-			fmt.Println(err.Error())
+			logger.Println(err.Error())
 			time.Sleep(time.Second * time.Duration(configuration.FailWaittime))
 			fails++
 			continue
@@ -116,24 +119,24 @@ func getConsulCient() (*consulapi.Client, error) {
 func removeStoredConfig(kv *consulapi.KV) {
 	_, err := consulDeleteTree(kv, configuration.GlobalPrefix, nil)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Println(err.Error())
 		return
 	}
-	fmt.Println("All values under the globalPrefix(\"" + configuration.GlobalPrefix + "\") is removed.")
+	logger.Println("All values under the globalPrefix(\"" + configuration.GlobalPrefix + "\") is removed.")
 }
 
 func isConfigInitialized(kv *consulapi.KV) bool {
 	keys, _, err := consulKeys(kv, configuration.GlobalPrefix, "", nil)
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Println(err.Error())
 		return false
 	}
 
 	if len(keys) > 0 {
-		fmt.Printf("%s exists! The configuration data has been initialized.\n", configuration.GlobalPrefix)
+		logger.Printf("%s exists! The configuration data has been initialized.\n", configuration.GlobalPrefix)
 		return true
 	}
-	fmt.Printf("%s doesn't exist! Start importing configuration data.\n", configuration.GlobalPrefix)
+	logger.Printf("%s doesn't exist! Start importing configuration data.\n", configuration.GlobalPrefix)
 	return false
 }
 
@@ -155,7 +158,7 @@ func loadConfigFromPath(kv *consulapi.KV) {
 		}
 
 		dir = strings.TrimPrefix(dir, configPath+"/")
-		fmt.Println("found config file:", file, "in context", dir)
+		logger.Println("found config file:", file, "in context", dir)
 
 		props, err := readPropertyFile(path)
 		if err != nil {
@@ -172,7 +175,7 @@ func loadConfigFromPath(kv *consulapi.KV) {
 		return nil
 	})
 	if err != nil {
-		fmt.Println(err.Error())
+		logger.Println(err.Error())
 		return
 	}
 }
