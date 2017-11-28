@@ -49,6 +49,8 @@ var (
 var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
 func main() {
+	printBanner("./banner.txt")
+
 	// Load configuration data
 	if err := loadConfigurationFile("./configuration.json"); err != nil {
 		logger.Println(err.Error())
@@ -69,6 +71,16 @@ func main() {
 	} else if !isConfigInitialized(kv) {
 		loadConfigFromPath(kv)
 	}
+}
+
+func printBanner(path string) {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+
+	fmt.Println(string(b))
 }
 
 func loadConfigurationFile(path string) error {
