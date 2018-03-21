@@ -51,6 +51,9 @@ func mockKvPut(kv *consulapi.KV, p *consulapi.KVPair, q *consulapi.WriteOptions)
 }
 
 func mockKvKeys(kv *consulapi.KV, prefix string, separator string, q *consulapi.QueryOptions) ([]string, *consulapi.QueryMeta, error) {
+	if (kv == nil) {
+		return nil, nil, errors.New("Invalid consul kv")
+	}
 	var values []string
 	for k := range kvMap {
 		if strings.HasPrefix(k, prefix) {
@@ -232,7 +235,7 @@ func TestIsYamlExtensions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if ret := isYamlExtensions(tc.file.Name()); ret != tc.expectedRetVal {
+			if ret := isYamlExtension(tc.file.Name()); ret != tc.expectedRetVal {
 				t.Error("File:" + tc.file.Name() + ", Expected retval:" +
 					strconv.FormatBool(tc.expectedRetVal) + ", Actual retval:" + strconv.FormatBool(ret))
 			}
@@ -319,9 +322,9 @@ func TestIsConfigInitialized(t *testing.T) {
 		t.Fatal("setUp failed : " + err.Error())
 	}
 
-	//if isConfigInitialized(nil) {
-	//	t.Error("Config should not be initialized with invalid consul kv.")
-	//}
+	if isConfigInitialized(nil) {
+		t.Error("Config should not be initialized with invalid consul kv.")
+	}
 
 	consulClient, _ := getConsulCient()
 	if consulClient == nil {
