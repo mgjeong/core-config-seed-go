@@ -21,5 +21,5 @@ import (
 )
 
 func main() {
-	configseed.RunApplication();
+	configseed.RunApplication("./res/configuration.json", "./res/banner.txt");
 }
