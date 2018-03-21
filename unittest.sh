@@ -14,23 +14,36 @@
 # limitations under the License.
 #
 ###############################################################################
+#!/bin/bash
 
-# Consul Docker image for EdgeX Foundry
-FROM consul:0.7.3
+export GOPATH=$PWD
 
-# environment variables
-ENV APP_DIR=/edgex/core-config-seed-go
-ENV APP=core-config-seed-go
-ENV WAIT_FOR_A_WHILE=5
-ENV CONSUL_ARGS="-server -client=0.0.0.0 -bootstrap -ui"
+go get github.com/magiconair/properties
+go get gopkg.in/yaml.v2
+go get github.com/hashicorp/consul/api
 
-# copy files
-COPY $APP launch-consul-config.sh $APP_DIR/
-COPY ./res $APP_DIR/res
-COPY ./config $APP_DIR/config
+pkg_list=("configseed")
 
-# set the working directory
-WORKDIR $APP_DIR
+function func_cleanup(){
+    rm *.out *.test
+}
 
-# call the wrapper to launch consul and config-seed application
-CMD ["sh", "launch-consul-config.sh"]
+count=0
+for pkg in "${pkg_list[@]}"; do
+    go test -c -v -gcflags "-N -l" $pkg
+    go test -coverprofile=$count.cover.out $pkg
+    if [ $? -ne 0 ]; then
+        echo "Unittest is failed."
+        func_cleanup
+        exit 1
+    fi
+    count=$count.0
+done
+
+echo "mode: set" > coverage.out && cat *.cover.out | grep -v mode: | sort -r | \
+awk '{if($1 != last) {print $0;last=$1}}' >> coverage.out
+
+go tool cover -func=coverage.out
+go tool cover -html=coverage.out -o coverall.html
+
+func_cleanup

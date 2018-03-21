@@ -16,23 +16,10 @@
  *******************************************************************************/
 package main
 
-// Struct used to pase the JSON configuration file
-type ConfigurationStruct struct{
-    ConfigPath string
-    GlobalPrefix string
-    ConsulProtocol string
-    ConsulHost string
-    ConsulPort int
-    IsReset bool
-    FailLimit int
-    FailWaittime int
-    AcceptablePropertyExtensions []string
-    YamlExtensions []string
-}
-
-// Configuration data for the config-seed service
-var configuration ConfigurationStruct = ConfigurationStruct{}	// Needs to be initialized before used
-
-var (
-	CONSUL_STATUS_PATH string = "/v1/agent/self"
+import (
+	"configseed"
 )
+
+func main() {
+	configseed.RunApplication("./res/configuration.json", "./res/banner.txt");
+}

@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package main
+package configseed
 
 import (
 	"errors"
@@ -36,7 +36,7 @@ var (
 	originHttpGet   = httpGet
 
 	jsonFile, propertiesFile, yamlFile *os.File
-	kvMap                              map[string]string
+	kvMap map[string]string
 )
 
 func clearKvMap() {
@@ -51,6 +51,9 @@ func mockKvPut(kv *consulapi.KV, p *consulapi.KVPair, q *consulapi.WriteOptions)
 }
 
 func mockKvKeys(kv *consulapi.KV, prefix string, separator string, q *consulapi.QueryOptions) ([]string, *consulapi.QueryMeta, error) {
+	if (kv == nil) {
+		return nil, nil, errors.New("Invalid consul kv")
+	}
 	var values []string
 	for k := range kvMap {
 		if strings.HasPrefix(k, prefix) {
@@ -154,6 +157,16 @@ func TestLoadConfigurationFile(t *testing.T) {
 		t.Fatal("setUp failed : " + err.Error())
 	}
 
+	var invalidJsonFile *os.File
+	invalidJsonFile, err = os.Create("invalid.json")
+	if err != nil {
+		t.Fatal("setUp failed : " + err.Error())
+	}
+	_, err = invalidJsonFile.Write([]byte("{\"This is an invalid json\"}"))
+	if err != nil {
+		t.Fatal("setUp failed : " + err.Error())
+	}
+
 	testCases := []struct {
 		name        string
 		path        string
@@ -161,6 +174,7 @@ func TestLoadConfigurationFile(t *testing.T) {
 	}{
 		{"Success", jsonFile.Name(), ""},
 		{"ExpectErrorWithInvalidFilePath", "invalid.file", "open invalid.file: no such file or directory"},
+		{"ExpectErrorWithInvalidJsonFile", invalidJsonFile.Name(), "invalid character '}' after object key"},
 	}
 
 	for _, tc := range testCases {
@@ -170,6 +184,10 @@ func TestLoadConfigurationFile(t *testing.T) {
 				t.Error("Expected error:" + tc.expectedErr + ", Actual error:" + err.Error())
 			}
 		})
+	}
+
+	if invalidJsonFile != nil {
+		os.Remove(invalidJsonFile.Name())
 	}
 }
 
@@ -217,7 +235,7 @@ func TestIsYamlExtensions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if ret := isYamlExtensions(tc.file.Name()); ret != tc.expectedRetVal {
+			if ret := isYamlExtension(tc.file.Name()); ret != tc.expectedRetVal {
 				t.Error("File:" + tc.file.Name() + ", Expected retval:" +
 					strconv.FormatBool(tc.expectedRetVal) + ", Actual retval:" + strconv.FormatBool(ret))
 			}
@@ -232,24 +250,51 @@ func TestReadPropertiesFile(t *testing.T) {
 		t.Fatal("setUp failed : " + err.Error())
 	}
 
+	var invalidPropertiesFile, invalidYamlFile *os.File
+	invalidPropertiesFile, err = os.Create("invalid.properties")
+	if err != nil {
+		t.Fatal("setUp failed : " + err.Error())
+	}
+	_, err = invalidPropertiesFile.Write([]byte("This is an invalid properties"))
+	if err != nil {
+		t.Fatal("setUp failed : " + err.Error())
+	}
+
+	invalidYamlFile, err = os.Create("invalid.yaml")
+	if err != nil {
+		t.Fatal("setUp failed : " + err.Error())
+	}
+	_, err = invalidYamlFile.Write([]byte("This is an invalid yaml"))
+	if err != nil {
+		t.Fatal("setUp failed : " + err.Error())
+	}
+
 	testCases := []struct {
 		name          string
-		file          *os.File
+		file          string//*os.File
+		isValidFile   bool
 		key           string
 		isKeyValid    bool
 		expectedValue string
 	}{
-		{"PropertiesFile_Success", propertiesFile, "key", true, "value"},
-		{"PropertiesFile_ExpectValueNotExistWithInvalidKey", propertiesFile, "Invalid_key", false, "value"},
-		{"YamlFile_Success", yamlFile, "key", true, "value"},
-		{"YamlFile_ExpectValueNotExistWithInvalidKey", yamlFile, "Invalid_key", false, "value"},
+		{"PropertiesFile_Success", propertiesFile.Name(), true, "key", true, "value"},
+		{"PropertiesFile_ExpectFailToOpenFile", "NoExist.properties", false, "key", false, "value"},
+		{"PropertiesFile_ExpectFailToParse", invalidPropertiesFile.Name(), false, "key", false, "value"},
+		{"PropertiesFile_ExpectValueNotExistWithInvalidKey", propertiesFile.Name(), true, "Invalid_key", false, "value"},
+		{"YamlFile_Success", yamlFile.Name(), true, "key", true, "value"},
+		{"YamlFile_ExpectFailToOpenFile", "NoExist.yaml", false, "key", false, "value"},
+		{"YamlFile_ExpectFailToParse", invalidYamlFile.Name(), false, "key", false, "value"},
+		{"YamlFile_ExpectValueNotExistWithInvalidKey", yamlFile.Name(), true, "Invalid_key", false, "value"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			props, err := readPropertyFile(tc.file.Name())
+			props, err := readPropertyFile(tc.file)
 			if err != nil {
-				t.Fatal("readPropertyFile failed : " + err.Error())
+				if tc.isValidFile {
+					t.Error("readPropertyFile failed : " + err.Error())
+				}
+				return
 			}
 
 			val, exist := props[tc.key]
@@ -260,6 +305,14 @@ func TestReadPropertiesFile(t *testing.T) {
 			}
 		})
 	}
+
+	if invalidPropertiesFile != nil {
+		os.Remove(invalidPropertiesFile.Name())
+	}
+
+	if invalidYamlFile != nil {
+		os.Remove(invalidYamlFile.Name())
+	}
 }
 
 func TestIsConfigInitialized(t *testing.T) {
@@ -267,6 +320,10 @@ func TestIsConfigInitialized(t *testing.T) {
 	defer tearDown(t)
 	if err != nil {
 		t.Fatal("setUp failed : " + err.Error())
+	}
+
+	if isConfigInitialized(nil) {
+		t.Error("Config should not be initialized with invalid consul kv.")
 	}
 
 	consulClient, _ := getConsulCient()
@@ -360,6 +417,22 @@ func TestLoadConfigFromPath(t *testing.T) {
 			}
 
 			clearKvMap()
+		})
+	}
+}
+
+func TestPrintBanner(t *testing.T) {
+	testCases := []struct {
+		name              string
+		bannerFilePath    string
+	}{
+		{"Success", "../../res/banner.txt"},
+		{"ExpectFailWithInvalidFilePath", "./Invalid_path.txt"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			printBanner(tc.bannerFilePath)
 		})
 	}
 }

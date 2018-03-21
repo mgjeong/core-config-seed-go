@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package main
+package configseed
 
 import (
 	"encoding/json"
@@ -35,8 +35,6 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-type ConfigProperties map[string]string
-
 var (
 	consulDefaultConfig = consulapi.DefaultConfig
 	consulNewClient     = consulapi.NewClient
@@ -46,13 +44,17 @@ var (
 	httpGet             = http.Get
 )
 
+// Configuration data for the config-seed service.
+var configuration ConfigurationStruct = ConfigurationStruct{}
+
 var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
-func main() {
-	printBanner("./banner.txt")
+// Run the Config-Seed application.
+func RunApplication(configFilePath string, bannerFilePath string) {
+	printBanner(bannerFilePath)
 
 	// Load configuration data
-	if err := loadConfigurationFile("./configuration.json"); err != nil {
+	if err := loadConfigurationFile(configFilePath); err != nil {
 		logger.Println(err.Error())
 		return
 	}
@@ -71,8 +73,10 @@ func main() {
 	} else if !isConfigInitialized(kv) {
 		loadConfigFromPath(kv)
 	}
+	// If 'IsReset' is unset and Consul already has been configured, do nothing.
 }
 
+// Print a banner.
 func printBanner(path string) {
 	b, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -83,6 +87,8 @@ func printBanner(path string) {
 	fmt.Println(string(b))
 }
 
+// Load a json file that contains configuration info for Config-Seed applcation
+// and keep the info in configuration variable.
 func loadConfigurationFile(path string) error {
 	// Read the configuration file
 	contents, err := ioutil.ReadFile(path)
@@ -99,6 +105,8 @@ func loadConfigurationFile(path string) error {
 	return nil
 }
 
+// Get handle of consul client using the URL from configuration info.
+// Before getting handle, it tries to receive a response from consul by simple health-check.
 func getConsulCient() (*consulapi.Client, error) {
 	consulUrl := configuration.ConsulProtocol + "://" + configuration.ConsulHost + ":" + strconv.Itoa(configuration.ConsulPort)
 
@@ -128,6 +136,7 @@ func getConsulCient() (*consulapi.Client, error) {
 	return consulNewClient(config)
 }
 
+// Remove all values in Consul K/V store, under the globalprefix which is presents in configuration file.
 func removeStoredConfig(kv *consulapi.KV) {
 	_, err := consulDeleteTree(kv, configuration.GlobalPrefix, nil)
 	if err != nil {
@@ -137,6 +146,7 @@ func removeStoredConfig(kv *consulapi.KV) {
 	logger.Println("All values under the globalPrefix(\"" + configuration.GlobalPrefix + "\") is removed.")
 }
 
+// Check if Consul has been configured by trying to get any key that starts with a globalprefix.
 func isConfigInitialized(kv *consulapi.KV) bool {
 	keys, _, err := consulKeys(kv, configuration.GlobalPrefix, "", nil)
 	if err != nil {
@@ -152,6 +162,7 @@ func isConfigInitialized(kv *consulapi.KV) bool {
 	return false
 }
 
+// Load all config files and put the configuration info to Consul K/V store.
 func loadConfigFromPath(kv *consulapi.KV) {
 	err := filepath.Walk(configuration.ConfigPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -169,7 +180,7 @@ func loadConfigFromPath(kv *consulapi.KV) {
 			return err
 		}
 
-		dir = strings.TrimPrefix(dir, configPath+"/")
+		dir = strings.TrimPrefix(dir, configPath + "/")
 		logger.Println("found config file:", file, "in context", dir)
 
 		props, err := readPropertyFile(path)
@@ -192,6 +203,8 @@ func loadConfigFromPath(kv *consulapi.KV) {
 	}
 }
 
+// Check whether a filename extension of input file belongs to the list of acceptable property extensions
+// which are present in configuration file.
 func isAcceptablePropertyExtensions(file string) bool {
 	for _, v := range configuration.AcceptablePropertyExtensions {
 		if v == filepath.Ext(file) {
@@ -201,8 +214,9 @@ func isAcceptablePropertyExtensions(file string) bool {
 	return false
 }
 
+// Load a property file(.yaml or .properties) and parse it to a map.
 func readPropertyFile(filePath string) (ConfigProperties, error) {
-	if isYamlExtensions(filePath) {
+	if isYamlExtension(filePath) {
 		// Read .yaml/.yml file
 		return readYamlFile(filePath)
 	} else {
@@ -211,7 +225,8 @@ func readPropertyFile(filePath string) (ConfigProperties, error) {
 	}
 }
 
-func isYamlExtensions(file string) bool {
+// Check whether a filename extension is yaml or not.
+func isYamlExtension(file string) bool {
 	for _, v := range configuration.YamlExtensions {
 		if v == filepath.Ext(file) {
 			return true
@@ -220,6 +235,7 @@ func isYamlExtensions(file string) bool {
 	return false
 }
 
+// Parse a yaml file to a map.
 func readYamlFile(filePath string) (ConfigProperties, error) {
 	configProps := ConfigProperties{}
 
@@ -240,6 +256,7 @@ func readYamlFile(filePath string) (ConfigProperties, error) {
 	return configProps, nil
 }
 
+// Parse a properties file to a map.
 func readPropertiesFile(filePath string) (ConfigProperties, error) {
 	configProps := ConfigProperties{}
 
