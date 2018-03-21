@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package main
+package configseed
 
 import (
 	"encoding/json"
@@ -48,11 +48,11 @@ var (
 
 var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
-func main() {
-	printBanner("./banner.txt")
+func RunApplication() {
+	printBanner("./res/banner.txt")
 
 	// Load configuration data
-	if err := loadConfigurationFile("./configuration.json"); err != nil {
+	if err := loadConfigurationFile("./res/configuration.json"); err != nil {
 		logger.Println(err.Error())
 		return
 	}

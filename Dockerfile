@@ -14,28 +14,6 @@
 # limitations under the License.
 #
 ###############################################################################
-# Docker image for EdgeX Foundry Config Seed 
-FROM golang:1.7.5-alpine AS build-env
-
-RUN mkdir -p /go/src \
- && mkdir -p /go/bin \
- && mkdir -p /go/pkg
-
-ENV GOPATH=/go
-ENV PATH=$GOPATH/bin:$PATH
-
-RUN apk add --update git
-RUN go get github.com/hashicorp/consul/api
-RUN go get github.com/magiconair/properties
-RUN go get gopkg.in/yaml.v2
-
-RUN mkdir -p $GOPATH/src/core-config-seed-go
-WORKDIR src/core-config-seed-go
-COPY /src/. .
-COPY /res/. .
-
-RUN go build .
-
 
 # Consul Docker image for EdgeX Foundry
 FROM consul:0.7.3
@@ -46,14 +24,13 @@ ENV APP=core-config-seed-go
 ENV WAIT_FOR_A_WHILE=5
 ENV CONSUL_ARGS="-server -client=0.0.0.0 -bootstrap -ui"
 
-#set the working directory
+# copy files
+COPY $APP launch-consul-config.sh $APP_DIR/
+COPY ./res $APP_DIR/res
+COPY ./config $APP_DIR/config
+
+# set the working directory
 WORKDIR $APP_DIR
 
-#copy Go App and default config files to the image
-COPY --from=build-env /go/src/core-config-seed-go/ .
-
-COPY launch-consul-config.sh .
-COPY ./config ./config
-
-#call the wrapper to launch consul and main app
-CMD $APP_DIR/launch-consul-config.sh
+# call the wrapper to launch consul and config-seed application
+CMD ["sh", "launch-consul-config.sh"]

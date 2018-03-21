@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  *******************************************************************************/
-package main
+package configseed
 
 // Struct used to pase the JSON configuration file
 type ConfigurationStruct struct{
