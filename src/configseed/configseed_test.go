@@ -417,3 +417,19 @@ func TestLoadConfigFromPath(t *testing.T) {
 		})
 	}
 }
+
+func TestPrintBanner(t *testing.T) {
+	testCases := []struct {
+		name              string
+		bannerFilePath    string
+	}{
+		{"Success", "../../res/banner.txt"},
+		{"ExpectFailWithInvalidFilePath", "./Invalid_path.txt"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			printBanner(tc.bannerFilePath)
+		})
+	}
+}
