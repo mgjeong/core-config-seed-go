@@ -23,7 +23,7 @@ The following steps provide how to build sources codes and dockerize it to creat
 $ ./build.sh
 ```
 If source codes are successfully built, you can find an output binary file, **core-config-seed-go**, on a root of project folder.</br>
-(Note that this application does not work without Consul, so it needs to be dockerized on Consul docker image)
+(Note that this application does not work without a Consul agent running, so it needs to be dockerized on Consul docker image)
 
 #### 2. Docker Image  ####
 Next, you can create it to a Docker image.

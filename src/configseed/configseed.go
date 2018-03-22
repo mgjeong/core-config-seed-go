@@ -29,12 +29,32 @@ import (
 	"strings"
 	"time"
 
+	consulapi "github.com/hashicorp/consul/api"
 	"github.com/magiconair/properties"
 	"gopkg.in/yaml.v2"
-
-	consulapi "github.com/hashicorp/consul/api"
 )
 
+// URL to check a Consul agent status.
+const CONSUL_STATUS_PATH string = "/v1/agent/self"
+
+// Configuration struct used to parse the JSON configuration file.
+type ConfigurationStruct struct {
+	ConfigPath                   string
+	GlobalPrefix                 string
+	ConsulProtocol               string
+	ConsulHost                   string
+	ConsulPort                   int
+	IsReset                      bool
+	FailLimit                    int
+	FailWaittime                 int
+	AcceptablePropertyExtensions []string
+	YamlExtensions               []string
+}
+
+// Map to cover key/value.
+type ConfigProperties map[string]string
+
+// Hook the functions in the other packages for the tests.
 var (
 	consulDefaultConfig = consulapi.DefaultConfig
 	consulNewClient     = consulapi.NewClient
@@ -47,6 +67,7 @@ var (
 // Configuration data for the config-seed service.
 var configuration ConfigurationStruct = ConfigurationStruct{}
 
+// Logger for the config-seed service.
 var logger = log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
 // Run the Config-Seed application.
@@ -105,8 +126,8 @@ func loadConfigurationFile(path string) error {
 	return nil
 }
 
-// Get handle of consul client using the URL from configuration info.
-// Before getting handle, it tries to receive a response from consul by simple health-check.
+// Get handle of Consul client using the URL from configuration info.
+// Before getting handle, it tries to receive a response from a Consul agent by simple health-check.
 func getConsulCient() (*consulapi.Client, error) {
 	consulUrl := configuration.ConsulProtocol + "://" + configuration.ConsulHost + ":" + strconv.Itoa(configuration.ConsulPort)
 
@@ -180,7 +201,7 @@ func loadConfigFromPath(kv *consulapi.KV) {
 			return err
 		}
 
-		dir = strings.TrimPrefix(dir, configPath + "/")
+		dir = strings.TrimPrefix(dir, configPath+"/")
 		logger.Println("found config file:", file, "in context", dir)
 
 		props, err := readPropertyFile(path)
@@ -188,6 +209,7 @@ func loadConfigFromPath(kv *consulapi.KV) {
 			return err
 		}
 
+		// Put config properties to Consul K/V store.
 		prefix := configuration.GlobalPrefix + "/" + dir
 		for k := range props {
 			p := &consulapi.KVPair{Key: prefix + k, Value: []byte(props[k])}
