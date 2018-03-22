@@ -36,7 +36,7 @@ var (
 	originHttpGet   = httpGet
 
 	jsonFile, propertiesFile, yamlFile *os.File
-	kvMap map[string]string
+	kvMap                              map[string]string
 )
 
 func clearKvMap() {
@@ -51,7 +51,7 @@ func mockKvPut(kv *consulapi.KV, p *consulapi.KVPair, q *consulapi.WriteOptions)
 }
 
 func mockKvKeys(kv *consulapi.KV, prefix string, separator string, q *consulapi.QueryOptions) ([]string, *consulapi.QueryMeta, error) {
-	if (kv == nil) {
+	if kv == nil {
 		return nil, nil, errors.New("Invalid consul kv")
 	}
 	var values []string
@@ -271,7 +271,7 @@ func TestReadPropertiesFile(t *testing.T) {
 
 	testCases := []struct {
 		name          string
-		file          string//*os.File
+		filePath      string
 		isValidFile   bool
 		key           string
 		isKeyValid    bool
@@ -289,7 +289,7 @@ func TestReadPropertiesFile(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			props, err := readPropertyFile(tc.file)
+			props, err := readPropertyFile(tc.filePath)
 			if err != nil {
 				if tc.isValidFile {
 					t.Error("readPropertyFile failed : " + err.Error())
@@ -423,8 +423,8 @@ func TestLoadConfigFromPath(t *testing.T) {
 
 func TestPrintBanner(t *testing.T) {
 	testCases := []struct {
-		name              string
-		bannerFilePath    string
+		name           string
+		bannerFilePath string
 	}{
 		{"Success", "../../res/banner.txt"},
 		{"ExpectFailWithInvalidFilePath", "./Invalid_path.txt"},
