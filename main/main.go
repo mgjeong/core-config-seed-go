@@ -17,7 +17,7 @@
 package main
 
 import (
-	"configseed"
+	"core-config-seed-go/configseed"
 )
 
 func main() {

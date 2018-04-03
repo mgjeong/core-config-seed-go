@@ -16,13 +16,11 @@
 ###############################################################################
 #!/bin/bash
 
-export GOPATH=$PWD
-
 go get github.com/magiconair/properties
 go get gopkg.in/yaml.v2
 go get github.com/hashicorp/consul/api
 
-pkg_list=("configseed")
+pkg_list=("core-config-seed-go/configseed")
 
 function func_cleanup(){
     rm *.out *.test

@@ -16,17 +16,7 @@ $ git config --global http.proxy http://proxyuser:proxypwd@proxyserver.com:8080
     - [How to install](https://docs.docker.com/engine/installation/linux/docker-ce/ubuntu/)
 
 ## How to build ##
-The following steps provide how to build sources codes and dockerize it to create a Docker image.
-
-#### 1. Executable binary ####
-```shell
-$ ./build.sh
-```
-If source codes are successfully built, you can find an output binary file, **core-config-seed-go**, on a root of project folder.</br>
-(Note that this application does not work without a Consul agent running, so it needs to be dockerized on Consul docker image)
-
-#### 2. Docker Image  ####
-Next, you can create it to a Docker image.
+This provides how to dockerize sources codes to create a Docker image.
 ```shell
 $ docker build -t core-config-seed-go -f Dockerfile .
 ```
